@@ -7,7 +7,83 @@ from typing import Any
 import traceback
 from time import localtime
 import argparse
-from pprint import pp
+
+DATA = """
+@0,1,2,3
+1,07:00,07:40
+2,07:40,08:20
+3,08:20,09:00
+4,09:00,09:40
+I1,09:40,10:00
+5,10:00,10:40
+6,10:40,11:20
+7,11:20,12:00
+I2,12:00,13:00
+8,13:00,13:40
+9,13:40,14:20
+10,14:20,15:00
+
+@4
+1,07:00,07:30
+2,07:30,08:00
+3,08:00,08:30
+4,08:30,09:00
+5,09:00,09:30
+I1,09:30,09:50
+6,09:50,10:20
+7,10:20,10:50
+8,10:50,11:20
+I2,11:20,13:00
+9,13:00,13:30
+10,13:30,14:00
+11,14:00,14:30
+12,14:30,15:00
+
+%0
+1,1,Upacara/Apel
+2,4,Konsentrasi RPL
+I1,I1,Istirahat
+5,7,Proyek Kreatif dan Kewirausahaan
+I2,I2,Istirahat
+8,10,Proyek Kreatif dan Kewirausahaan
+
+%1
+1,2,Mapel Pilihan RPL
+3,4,PJOK
+I1,I1,Istirahat
+5,7,Konsentrasi RPL
+I2,I2,Istirahat
+8,10,Konsentrasi RPL
+
+%2
+1,2,Sejarah
+3,4,Pendidikan Pancasila
+I1,I1,Istirahat
+5,6,Bahasa Inggris
+7,7,Konsentrasi RPL
+I2,I2,Istirahat
+8,10,Konsentrasi RPL
+
+%3
+1,2,Bahasa Inggris
+3,4,Bahasa Jawa
+I1,I1,Istirahat
+5,7,Konsentrasi RPL
+I2,I2,Istirahat
+8,8,Konsentrasi RPL
+9,10,BK
+
+%4
+1,1,Pembiasaan Hari Jumat
+2,4,Pendidikan Agama Islam dan Budi Pekerti
+5,5,Bahasa Indonesia
+I1,I1,Istirahat
+6,7,Bahasa Indonesia
+8,8,Matematika
+I2,I2,Istirahat
+9,10,Matematika
+11,12,Bahasa Jepang
+"""
 
 type Data = dict[int, dict[str, TimeRange]]
 type Subject = (str, TimeRange)
@@ -117,9 +193,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     pwd = os.path.dirname(sys.argv[0])
     data_path = f"{pwd}/data.txt"
-    with open(data_path) as f:
-        data_str = f.read()
-        data = parse_data(data_str)
+    data = parse_data(DATA)
     now = localtime()
     time = now.tm_hour * 60 + now.tm_min
     day = now.tm_wday
