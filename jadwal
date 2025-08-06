@@ -1,0 +1,169 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+from dataclasses import dataclass
+from typing import Any
+import traceback
+from time import localtime
+import argparse
+from pprint import pp
+
+type Data = dict[int, dict[str, TimeRange]]
+type Subject = (str, TimeRange)
+
+
+@dataclass
+class TimeRange:
+    begin: int
+    end: int
+
+    # [) (start inclusive, end exclusive)
+    def contains(self, time: int) -> bool:
+        return time >= self.begin and time < self.end
+
+    def __hash__(self) -> int:
+        return hash((self.begin, self.end))
+
+
+def parse_clock(s: str) -> int:
+    c = s.split(":")
+    return int(c[0]) * 60 + int(c[1])
+
+
+def human_redable_time(min: int) -> str:
+    rhour = int(min / 60)
+    rmin = min % 60
+    return f"{rhour} jam {rmin} menit"
+
+
+def sort_data(data: Data) -> Data:
+    for key in data.keys():
+        data[key] = dict(sorted(data[key].items(), key=lambda item: item[0].begin))
+    return data
+
+
+def unique_list(list: list) -> list:
+    unique_list = []
+    for item in list:
+        if item not in unique_list:
+            unique_list.append(item)
+    return unique_list
+
+
+def parse_data(data: str) -> Data:
+    hours: Data = {}
+    sched: Data = {}
+
+    header: list[str] = []
+    fields: dict[str, Any] = {}
+    state = ""
+    for lnum, line in enumerate(data.splitlines()):
+        if len(line) > 0 and line[0] != "#":
+            if line[0] == "@":
+                fields = {}
+                state = "hours"
+                try:
+                    header = map(int, line[1:].split(","))
+                except Exception:
+                    raise Exception("except unimplemented")
+            elif line[0] == "%":
+                fields = {}
+                state = "sched"
+                try:
+                    header = [int(line[1:])]
+                except Exception:
+                    raise Exception("except unimplemented")
+            else:
+                entry: list[str] = line.split(",")
+                if len(entry) != 3:
+                    raise Exception("except unimplemented")
+                if state == "hours":
+                    fields[entry[0]] = TimeRange(
+                        parse_clock(entry[1]),
+                        parse_clock(entry[2]),
+                    )
+                elif state == "sched":
+                    time_range = TimeRange(
+                        hours[header[0]][entry[0]].begin,
+                        hours[header[0]][entry[1]].end,
+                    )
+                    fields[time_range] = entry[2]
+        if state == "hours":
+            for day in header:
+                hours[day] = fields
+        elif state == "sched":
+            for day in header:
+                sched[day] = fields
+
+    sched = sort_data(sched)
+    return sched
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Program untuk melihat jadwal pelajaran."
+    )
+    parser.add_argument(
+        "-n",
+        "--next",
+        nargs="?",
+        default="0",
+        help="tampilkan daftar pelajaran n hari besok",
+    )
+    return parser.parse_args()
+
+
+def main() -> None:
+    pwd = os.path.dirname(sys.argv[0])
+    data_path = f"{pwd}/data.txt"
+    with open(data_path) as f:
+        data_str = f.read()
+        data = parse_data(data_str)
+    now = localtime()
+    time = now.tm_hour * 60 + now.tm_min
+    day = now.tm_wday
+    args = parse_args()
+    day_offset = int(args.next)
+    if day_offset > 0:
+        if day + day_offset in data:
+            today_data = data[day + day_offset]
+            # TODO: "Istirahat" hardcoded
+            subjects = filter(
+                lambda x: x != "Istirahat", unique_list(list(today_data.values()))
+            )
+            print("Pelajaran besok:")
+            for x in subjects:
+                print("-", x)
+        else:
+            print("Hari libur")
+    else:
+        if day in data:
+            today_data = data[day]
+            cur_subject: Subject | None = None
+            next_subject: Subject | None = None
+            today_data_items = list(today_data.items())
+            for i, (time_range, _) in enumerate(today_data_items):
+                if time_range.contains(time):
+                    cur_subject = today_data_items[i]
+                    if i < len(today_data_items) - 1:
+                        next_subject = today_data_items[i + 1]
+                    break
+            if cur_subject is not None:
+                print("Sekarang:", cur_subject[1])
+                if next_subject is not None:
+                    print("Selanjutnya:", next_subject[1])
+                remaining = cur_subject[0].end - time
+                print("Sisa", human_redable_time(remaining))
+            else:
+                print("Jam kosong")
+        else:
+            print("Hari libur")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception:
+        print(traceback.format_exc())
+        sys.exit(1)
