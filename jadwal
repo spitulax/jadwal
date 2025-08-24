@@ -199,40 +199,43 @@ def main() -> None:
     day = now.tm_wday
     args = parse_args()
     day_offset = int(args.next)
-    if day_offset > 0:
-        if day + day_offset in data:
-            today_data = data[day + day_offset]
-            # TODO: "Istirahat" hardcoded
-            subjects = filter(
-                lambda x: x != "Istirahat", unique_list(list(today_data.values()))
-            )
-            print("Pelajaran besok:")
-            for x in subjects:
-                print("-", x)
+
+    if day in data:
+        today_data = data[day]
+        cur_subject: Subject | None = None
+        next_subject: Subject | None = None
+        today_data_items = list(today_data.items())
+        for i, (time_range, _) in enumerate(today_data_items):
+            if time_range.contains(time):
+                cur_subject = today_data_items[i]
+                if i < len(today_data_items) - 1:
+                    next_subject = today_data_items[i + 1]
+                break
+        if cur_subject is not None:
+            print("Sekarang:", cur_subject[1])
+            if next_subject is not None:
+                print("Selanjutnya:", next_subject[1])
+            remaining = cur_subject[0].end - time
+            print("Sisa", human_redable_time(remaining))
         else:
-            print("Hari libur")
+            print("Jam kosong")
     else:
-        if day in data:
-            today_data = data[day]
-            cur_subject: Subject | None = None
-            next_subject: Subject | None = None
-            today_data_items = list(today_data.items())
-            for i, (time_range, _) in enumerate(today_data_items):
-                if time_range.contains(time):
-                    cur_subject = today_data_items[i]
-                    if i < len(today_data_items) - 1:
-                        next_subject = today_data_items[i + 1]
-                    break
-            if cur_subject is not None:
-                print("Sekarang:", cur_subject[1])
-                if next_subject is not None:
-                    print("Selanjutnya:", next_subject[1])
-                remaining = cur_subject[0].end - time
-                print("Sisa", human_redable_time(remaining))
-            else:
-                print("Jam kosong")
-        else:
-            print("Hari libur")
+        print("Hari libur")
+
+    print("====================")
+
+    next_day = (day + day_offset) % 7
+    if next_day in data:
+        today_data = data[next_day]
+        # TODO: "Istirahat" hardcoded
+        subjects = filter(
+            lambda x: x != "Istirahat", unique_list(list(today_data.values()))
+        )
+        print(f"Pelajaran {day_offset} hari lagi:")
+        for x in subjects:
+            print("-", x)
+    else:
+        print("Hari libur")
 
 
 if __name__ == "__main__":
