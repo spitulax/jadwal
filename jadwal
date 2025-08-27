@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import os
 import sys
 from dataclasses import dataclass
 from typing import Any
@@ -87,7 +86,7 @@ I2,I2,Istirahat
 """
 
 type Data = dict[int, dict[str, TimeRange]]
-type Subject = (str, TimeRange)
+type Subject = tuple[str, TimeRange]
 
 
 @dataclass
@@ -132,8 +131,8 @@ def parse_data(data: str) -> Data:
     hours: Data = {}
     sched: Data = {}
 
-    header: list[str] = []
-    fields: dict[str, Any] = {}
+    header: list[Any] = []
+    fields: dict[Any, Any] = {}
     state = ""
     for lnum, line in enumerate(data.splitlines()):
         if len(line) > 0 and line[0] != "#":
@@ -141,7 +140,7 @@ def parse_data(data: str) -> Data:
                 fields = {}
                 state = "hours"
                 try:
-                    header = map(int, line[1:].split(","))
+                    header = list(map(int, line[1:].split(",")))
                 except Exception:
                     raise Exception("except unimplemented")
             elif line[0] == "%":
@@ -192,8 +191,6 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
-    pwd = os.path.dirname(sys.argv[0])
-    data_path = f"{pwd}/data.txt"
     data = parse_data(DATA)
     now = localtime()
     time = now.tm_hour * 60 + now.tm_min
